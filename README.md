@@ -1,83 +1,153 @@
 # Social AI Agent – YouTube Comment Management Backend
 
-This project is a Node.js backend built to authenticate with Google using OAuth2.0 and perform YouTube comment operations like fetching, replying, and deleting comments. It’s a part of a larger system designed to handle social media interactions intelligently.
+A Node.js backend service for managing YouTube comments using Google OAuth 2.0 authentication. This project enables automated comment operations including fetching, replying, and deleting comments through the YouTube Data API v3.
 
 ## Features
 
-- Google OAuth 2.0 login integration
-- Secure access token and refresh token handling
-- YouTube comment fetch, reply, and delete functionality
-- Modular Express.js structure
-- Stores access tokens locally in a JSON file
+- **Google OAuth 2.0 Integration** – Secure authentication with YouTube API
+- **Token Management** – Automatic storage and handling of access and refresh tokens
+- **Comment Operations** – Fetch, reply to, and delete YouTube comments
+- **Modular Architecture** – Clean Express.js structure with separation of concerns
+- **Local Token Storage** – Persistent token storage in JSON format
 
 ## Tech Stack
 
-- Node.js
-- Express.js
-- Google APIs (`googleapis`)
-- dotenv for environment variable handling
-- MongoDB (optional for storing comment data)
-- YouTube Data API v3
+- **Runtime:** Node.js
+- **Framework:** Express.js
+- **APIs:** Google APIs (`googleapis`)
+- **Database:** MongoDB (optional)
+- **Environment Config:** dotenv
+- **API:** YouTube Data API v3
 
 ## Project Structure
 
+```
 social-ai-agent/
 │
 ├── config/
-│   ├── db.js
-│   └── token.json         # auto-created after OAuth login
+│   ├── db.js                    # Database configuration
+│   └── token.json               # OAuth tokens (auto-generated)
 │
 ├── controllers/
-│   ├── authController.js
-│   └── commentController.js
+│   ├── authController.js        # Authentication logic
+│   └── commentController.js     # Comment management logic
 │
 ├── models/
-│   └── Comment.js
+│   └── Comment.js               # Comment data model
 │
 ├── routes/
-│   ├── authRoutes.js      # Handles Google login and callback
-│   └── commentRoutes.js   # Comment API handlers
+│   ├── authRoutes.js            # OAuth routes
+│   └── commentRoutes.js         # Comment API endpoints
 │
-├── .env                   # contains secrets and config
-├── index.js               # main server file
+├── .env                         # Environment variables
+├── index.js                     # Main server entry point
+├── package.json
 └── README.md
+```
 
-## Environment Variables
+## Installation
 
-Create a `.env` file in the root folder with the following keys:
+### Prerequisites
 
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/social-ai-agent
-YT_API_KEY=your_youtube_api_key
-YT_CLIENT_ID=your_google_client_id
-YT_CLIENT_SECRET=your_google_client_secret
-YT_REDIRECT_URI=http://localhost:5000/api/oauth2callback
+- Node.js (v14 or higher)
+- MongoDB (optional, for comment logging)
+- Google Cloud Console project with YouTube Data API v3 enabled
 
-## How to Run
+### Setup
 
-1. Install the required packages:
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd social-ai-agent
+   ```
 
-```bash
-npm install
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-2. Start server:
+3. **Configure environment variables**
+   
+   Create a `.env` file in the root directory:
+   ```env
+   PORT=5000
+   MONGODB_URI=mongodb://localhost:27017/social-ai-agent
+   YT_API_KEY=your_youtube_api_key
+   YT_CLIENT_ID=your_google_client_id
+   YT_CLIENT_SECRET=your_google_client_secret
+   YT_REDIRECT_URI=http://localhost:5000/api/oauth2callback
+   ```
 
-node index.js
+4. **Start the server**
+   ```bash
+   node index.js
+   ```
 
-3.	Open this link in your browser to begin Google OAuth:
-http://localhost:5000/api/auth/youtube
+5. **Authenticate with Google**
+   
+   Navigate to the following URL in your browser:
+   ```
+   http://localhost:5000/api/auth/youtube
+   ```
+   
+   After successful authentication, tokens will be stored in `config/token.json`.
 
-4.	After successful login, the app will store the token in config/token.json.
+## API Endpoints
 
-Things to Do (Future Work)
-    .   Fetch comments form videos, Delete them, Reply to them
-	•	Add database logging for all comment actions
-	•	Integrate toxicity and sentiment analysis before replying
-	•	Build a small dashboard for monitoring comment sentiment
-	•	Add token auto-refresh logic
-	•	Deploy the service with domain and SSL
+### Authentication
+- `GET /api/auth/youtube` – Initialize OAuth flow
+- `GET /api/oauth2callback` – OAuth callback handler
 
-Author
+### Comment Management
+- `GET /api/comments` – Fetch comments from a video
+- `POST /api/comments/reply` – Reply to a comment
+- `DELETE /api/comments/:id` – Delete a comment
 
-Raghu Ram Kotaru
-Stony Brook University – Data Science Graduate Student
+## Roadmap
+
+### Planned Features
+
+- [ ] Complete comment CRUD operations (fetch, delete, reply)
+- [ ] Database logging for all comment actions
+- [ ] Sentiment and toxicity analysis integration
+- [ ] Automated comment moderation
+- [ ] Token auto-refresh mechanism
+- [ ] Admin dashboard for monitoring
+- [ ] Rate limiting and error handling
+- [ ] Production deployment with SSL
+
+### Future Enhancements
+
+- AI-powered response generation
+- Multi-platform support (Twitter, Instagram)
+- Comment analytics and reporting
+- Webhook integration for real-time notifications
+
+## Configuration Notes
+
+### Google Cloud Console Setup
+
+1. Create a project in [Google Cloud Console](https://console.cloud.google.com/)
+2. Enable YouTube Data API v3
+3. Create OAuth 2.0 credentials
+4. Add authorized redirect URI: `http://localhost:5000/api/oauth2callback`
+5. Copy Client ID and Client Secret to `.env` file
+
+### Token Storage
+
+The application stores OAuth tokens in `config/token.json`. This file is auto-generated after the first successful authentication and should be added to `.gitignore`.
+
+## Security Considerations
+
+- Never commit `.env` or `token.json` to version control
+- Use environment variables for all sensitive data
+- Implement rate limiting in production
+- Use HTTPS in production environments
+- Regularly rotate API keys and secrets
+
+
+## Author
+
+**Raghu Ram Kotaru**  
+Data Science Graduate Student  
+Stony Brook University
