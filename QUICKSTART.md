@@ -19,7 +19,8 @@ PORT=5000
 # MongoDB (use one of these)
 MONGODB_URI=mongodb://localhost:27017/social_ai_agent
 # OR for MongoDB Atlas:
-# MONGODB_URI="mongodb://localhost:27017/social_ai_agent"
+# MONGODB_URI="mongodb+srv://username:password@cluster.mongodb.net/social-ai-agent"
+
 
 # YouTube (get from Google Cloud Console)
 YT_CLIENT_ID=your_client_id
