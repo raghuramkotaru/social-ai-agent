@@ -1,0 +1,38 @@
+{
+  "name": "social-ai-agent",
+  "version": "1.0.0",
+  "description": "AI-powered social media comment handling agent with sentiment analysis, auto-reply, and content moderation",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "social-media",
+    "ai",
+    "sentiment-analysis",
+    "youtube",
+    "automation",
+    "azure",
+    "openai"
+  ],
+  "author": "Raghu Ram Kotaru",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.12.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "googleapis": "^166.0.0",
+    "mongoose": "^8.19.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

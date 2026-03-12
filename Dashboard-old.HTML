@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Media AI Agent - Dashboard</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    * {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .card-shadow {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .pulse-animation {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: .5;
+      }
+    }
+    
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 10px;
+    }
+    
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // API Base URL
+    const API_BASE = 'http://localhost:5000';
+
+    // Main Dashboard Component
+    function Dashboard() {
+      const [activeTab, setActiveTab] = useState('overview');
+      const [channelInfo, setChannelInfo] = useState(null);
+      const [videos, setVideos] = useState([]);
+      const [selectedVideo, setSelectedVideo] = useState(null);
+      const [analytics, setAnalytics] = useState(null);
+      const [comments, setComments] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [moderating, setModerating] = useState(false);
+      const [previewMode, setPreviewMode] = useState(true);
+
+      // Load channel info on mount
+      useEffect(() => {
+        loadChannelInfo();
+        loadVideos();
+      }, []);
+
+      // Load analytics when video selected
+      useEffect(() => {
+        if (selectedVideo) {
+          loadComments();
+        }
+      }, [selectedVideo]);
+
+      const loadChannelInfo = async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/channel/info`);
+          const data = await res.json();
+          setChannelInfo(data.channel);
+        } catch (error) {
+          console.error('Error loading channel:', error);
+        }
+      };
+
+      const loadVideos = async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/channel/videos`);
+          const data = await res.json();
+          setVideos(data.videos || []);
+        } catch (error) {
+          console.error('Error loading videos:', error);
+        }
+      };
+
+      const loadComments = async () => {
+        if (!selectedVideo) return;
+        setLoading(true);
+        try {
+          const res = await fetch(`${API_BASE}/api/channel/video/${selectedVideo.id}/comments`);
+          const data = await res.json();
+          setComments(data.comments || []);
+        } catch (error) {
+          console.error('Error loading comments:', error);
+        }
+        setLoading(false);
+      };
+
+      const moderateVideo = async () => {
+        if (!selectedVideo) return;
+        setModerating(true);
+        try {
+          const res = await fetch(`${API_BASE}/api/channel/video/${selectedVideo.id}/moderate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ autoExecute: !previewMode })
+          });
+          const data = await res.json();
+          setAnalytics(data.results);
+          
+          if (!previewMode) {
+            loadComments(); // Reload after moderation
+          }
+        } catch (error) {
+          console.error('Error moderating:', error);
+        }
+        setModerating(false);
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          {/* Header */}
+          <Header channelInfo={channelInfo} />
+          
+          {/* Main Content */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Tabs */}
+            <div className="mb-8">
+              <nav className="flex space-x-4 border-b border-gray-200">
+                <TabButton active={activeTab === 'overview'} onClick={() => setActiveTab('overview')}>
+                  📊 Overview
+                </TabButton>
+                <TabButton active={activeTab === 'moderation'} onClick={() => setActiveTab('moderation')}>
+                  🛡️ Moderation
+                </TabButton>
+                <TabButton active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')}>
+                  📈 Analytics
+                </TabButton>
+                <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>
+                  ⚙️ Settings
+                </TabButton>
+              </nav>
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'overview' && (
+              <OverviewTab 
+                channelInfo={channelInfo} 
+                videos={videos}
+                selectedVideo={selectedVideo}
+                setSelectedVideo={setSelectedVideo}
+                analytics={analytics}
+              />
+            )}
+
+            {activeTab === 'moderation' && (
+              <ModerationTab
+                selectedVideo={selectedVideo}
+                setSelectedVideo={setSelectedVideo}
+                videos={videos}
+                comments={comments}
+                loading={loading}
+                moderating={moderating}
+                previewMode={previewMode}
+                setPreviewMode={setPreviewMode}
+                moderateVideo={moderateVideo}
+                analytics={analytics}
+              />
+            )}
+
+            {activeTab === 'analytics' && (
+              <AnalyticsTab
+                selectedVideo={selectedVideo}
+                analytics={analytics}
+              />
+            )}
+
+            {activeTab === 'settings' && (
+              <SettingsTab />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Header Component
+    function Header({ channelInfo }) {
+      return (
+        <header className="gradient-bg text-white shadow-lg">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl">
+                  🤖
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold">Social Media AI Agent</h1>
+                  <p className="text-purple-200 text-sm">Intelligent Comment Management</p>
+                </div>
+              </div>
+              
+              {channelInfo && (
+                <div className="flex items-center space-x-6 bg-white/10 px-6 py-3 rounded-lg backdrop-blur-sm">
+                  <div className="text-right">
+                    <p className="text-sm text-purple-200">Channel</p>
+                    <p className="font-semibold">{channelInfo.title}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-purple-200">Videos</p>
+                    <p className="font-semibold">{channelInfo.videoCount}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-purple-200">Subscribers</p>
+                    <p className="font-semibold">{channelInfo.subscriberCount}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+      );
+    }
+
+    // Tab Button Component
+    function TabButton({ active, onClick, children }) {
+      return (
+        <button
+          onClick={onClick}
+          className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+            active
+              ? 'border-purple-600 text-purple-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          }`}
+        >
+          {children}
+        </button>
+      );
+    }
+
+    // Overview Tab
+    function OverviewTab({ channelInfo, videos, selectedVideo, setSelectedVideo, analytics }) {
+      return (
+        <div className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard
+              icon="📹"
+              label="Total Videos"
+              value={videos.length}
+              color="blue"
+            />
+            <StatCard
+              icon="💬"
+              label="Comments Today"
+              value={analytics?.totalProcessed || 0}
+              color="green"
+            />
+            <StatCard
+              icon="🗑️"
+              label="Spam Blocked"
+              value={analytics?.actionsExecuted?.hidden || 0}
+              color="red"
+            />
+            <StatCard
+              icon="✅"
+              label="Replies Sent"
+              value={analytics?.actionsExecuted?.replied || 0}
+              color="purple"
+            />
+          </div>
+
+          {/* Video Selection */}
+          <div className="bg-white rounded-lg card-shadow p-6">
+            <h3 className="text-lg font-semibold mb-4">📹 Your Videos</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {videos.map(video => (
+                <VideoCard
+                  key={video.id}
+                  video={video}
+                  selected={selectedVideo?.id === video.id}
+                  onClick={() => setSelectedVideo(video)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          {selectedVideo && (
+            <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg p-6 text-white">
+              <h3 className="text-xl font-bold mb-2">🎯 Selected Video</h3>
+              <p className="text-purple-100 mb-4">{selectedVideo.title}</p>
+              <div className="flex space-x-4">
+                <button className="bg-white text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-purple-50 transition">
+                  Analyze Comments
+                </button>
+                <button className="bg-purple-700 px-6 py-2 rounded-lg font-semibold hover:bg-purple-800 transition">
+                  View Analytics
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Moderation Tab
+    function ModerationTab({ 
+      selectedVideo, 
+      setSelectedVideo, 
+      videos, 
+      comments, 
+      loading, 
+      moderating,
+      previewMode,
+      setPreviewMode,
+      moderateVideo,
+      analytics 
+    }) {
+      return (
+        <div className="space-y-6">
+          {/* Video Selector */}
+          <div className="bg-white rounded-lg card-shadow p-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Video to Moderate
+            </label>
+            <select
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              value={selectedVideo?.id || ''}
+              onChange={(e) => {
+                const video = videos.find(v => v.id === e.target.value);
+                setSelectedVideo(video);
+              }}
+            >
+              <option value="">-- Choose a video --</option>
+              {videos.map(video => (
+                <option key={video.id} value={video.id}>{video.title}</option>
+              ))}
+            </select>
+          </div>
+
+          {selectedVideo && (
+            <>
+              {/* Moderation Controls */}
+              <div className="bg-white rounded-lg card-shadow p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">🛡️ Moderation Controls</h3>
+                  <div className="flex items-center space-x-4">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={previewMode}
+                        onChange={(e) => setPreviewMode(e.target.checked)}
+                        className="w-4 h-4 text-purple-600"
+                      />
+                      <span className="text-sm font-medium">Preview Mode</span>
+                    </label>
+                    <button
+                      onClick={moderateVideo}
+                      disabled={moderating}
+                      className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50"
+                    >
+                      {moderating ? '⏳ Processing...' : previewMode ? '👁️ Preview Actions' : '🚀 Execute Moderation'}
+                    </button>
+                  </div>
+                </div>
+
+                {analytics && (
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+                    <ActionStat label="Hidden" value={analytics.actionsExecuted.hidden} color="red" />
+                    <ActionStat label="Replied" value={analytics.actionsExecuted.replied} color="green" />
+                    <ActionStat label="Flagged" value={analytics.actionsExecuted.flagged} color="yellow" />
+                    <ActionStat label="Ignored" value={analytics.actionsExecuted.ignored} color="gray" />
+                    <ActionStat label="Skipped" value={analytics.actionsExecuted.skipped} color="blue" />
+                  </div>
+                )}
+              </div>
+
+              {/* Comments List */}
+              <div className="bg-white rounded-lg card-shadow p-6">
+                <h3 className="text-lg font-semibold mb-4">💬 Comments ({comments.length})</h3>
+                <div className="space-y-3 max-h-96 overflow-y-auto scrollbar-thin">
+                  {loading ? (
+                    <div className="text-center py-8 text-gray-500">Loading comments...</div>
+                  ) : comments.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">No comments found</div>
+                  ) : (
+                    comments.map((comment, idx) => (
+                      <CommentCard key={idx} comment={comment} />
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Action Results */}
+              {analytics?.details && (
+                <div className="bg-white rounded-lg card-shadow p-6">
+                  <h3 className="text-lg font-semibold mb-4">📋 Action Details</h3>
+                  <div className="space-y-3 max-h-96 overflow-y-auto scrollbar-thin">
+                    {analytics.details.map((detail, idx) => (
+                      <ActionDetail key={idx} detail={detail} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // Analytics Tab
+    function AnalyticsTab({ selectedVideo, analytics }) {
+      const chartRef = useRef(null);
+      const chartInstance = useRef(null);
+
+      useEffect(() => {
+        if (analytics && chartRef.current) {
+          const ctx = chartRef.current.getContext('2d');
+          
+          // Destroy existing chart
+          if (chartInstance.current) {
+            chartInstance.current.destroy();
+          }
+
+          // Create new chart
+          chartInstance.current = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: ['Positive', 'Neutral', 'Negative'],
+              datasets: [{
+                data: [
+                  analytics.details?.filter(d => d.sentiment === 'positive').length || 0,
+                  analytics.details?.filter(d => d.sentiment === 'neutral').length || 0,
+                  analytics.details?.filter(d => d.sentiment === 'negative').length || 0
+                ],
+                backgroundColor: ['#10b981', '#6b7280', '#ef4444'],
+                borderWidth: 0
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'bottom'
+                }
+              }
+            }
+          });
+        }
+
+        return () => {
+          if (chartInstance.current) {
+            chartInstance.current.destroy();
+          }
+        };
+      }, [analytics]);
+
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Sentiment Chart */}
+            <div className="bg-white rounded-lg card-shadow p-6">
+              <h3 className="text-lg font-semibold mb-4">📊 Sentiment Distribution</h3>
+              <div style={{ height: '300px' }}>
+                <canvas ref={chartRef}></canvas>
+              </div>
+            </div>
+
+            {/* Action Summary */}
+            <div className="bg-white rounded-lg card-shadow p-6">
+              <h3 className="text-lg font-semibold mb-4">⚡ Actions Summary</h3>
+              {analytics ? (
+                <div className="space-y-4">
+                  <ProgressBar label="Replied" value={analytics.actionsExecuted.replied} total={analytics.totalProcessed} color="green" />
+                  <ProgressBar label="Hidden" value={analytics.actionsExecuted.hidden} total={analytics.totalProcessed} color="red" />
+                  <ProgressBar label="Flagged" value={analytics.actionsExecuted.flagged} total={analytics.totalProcessed} color="yellow" />
+                  <ProgressBar label="Ignored" value={analytics.actionsExecuted.ignored} total={analytics.totalProcessed} color="gray" />
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-8">Run moderation to see analytics</p>
+              )}
+            </div>
+          </div>
+
+          {/* Top Issues */}
+          {analytics?.details && (
+            <div className="bg-white rounded-lg card-shadow p-6">
+              <h3 className="text-lg font-semibold mb-4">⚠️ Flagged Comments</h3>
+              <div className="space-y-3">
+                {analytics.details
+                  .filter(d => d.decision === 'FLAG')
+                  .map((detail, idx) => (
+                    <div key={idx} className="border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded">
+                      <p className="font-medium text-gray-900">{detail.author}</p>
+                      <p className="text-gray-700 mt-1">{detail.text}</p>
+                      <p className="text-sm text-gray-500 mt-2">{detail.reason}</p>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Settings Tab
+    function SettingsTab() {
+      return (
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg card-shadow p-6">
+            <h3 className="text-lg font-semibold mb-4">⚙️ Moderation Settings</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sentiment Threshold
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  defaultValue="60"
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500 mt-1">Comments below this score are considered negative</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Auto-Reply to Positive Comments
+                </label>
+                <input type="checkbox" defaultChecked className="w-4 h-4" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Auto-Reply to Negative Comments
+                </label>
+                <input type="checkbox" defaultChecked className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg card-shadow p-6">
+            <h3 className="text-lg font-semibold mb-4">🚫 Keyword Filters</h3>
+            <p className="text-sm text-gray-600 mb-4">Manage banned keywords and spam filters</p>
+            <div className="space-y-2">
+              <KeywordBadge keyword="scam" />
+              <KeywordBadge keyword="fraud" />
+              <KeywordBadge keyword="spam" />
+              <KeywordBadge keyword="hate" />
+            </div>
+            <button className="mt-4 text-purple-600 font-medium text-sm hover:text-purple-700">
+              + Add New Keyword
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Utility Components
+    function StatCard({ icon, label, value, color }) {
+      const colors = {
+        blue: 'from-blue-500 to-blue-600',
+        green: 'from-green-500 to-green-600',
+        red: 'from-red-500 to-red-600',
+        purple: 'from-purple-500 to-purple-600'
+      };
+
+      return (
+        <div className={`bg-gradient-to-br ${colors[color]} rounded-lg p-6 text-white card-hover`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm opacity-90">{label}</p>
+              <p className="text-3xl font-bold mt-2">{value}</p>
+            </div>
+            <div className="text-4xl opacity-80">{icon}</div>
+          </div>
+        </div>
+      );
+    }
+
+    function VideoCard({ video, selected, onClick }) {
+      return (
+        <div
+          onClick={onClick}
+          className={`border-2 rounded-lg p-4 cursor-pointer transition ${
+            selected ? 'border-purple-600 bg-purple-50' : 'border-gray-200 hover:border-purple-300'
+          }`}
+        >
+          <div className="flex items-start space-x-3">
+            <img
+              src={video.thumbnail}
+              alt={video.title}
+              className="w-20 h-15 object-cover rounded"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">{video.title}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {new Date(video.publishedAt).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function CommentCard({ comment }) {
+      return (
+        <div className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-semibold">
+              {comment.author[0]}
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-sm">{comment.author}</p>
+              <p className="text-gray-700 mt-1 text-sm">{comment.text}</p>
+              <p className="text-xs text-gray-500 mt-2">
+                {new Date(comment.publishedAt).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ActionDetail({ detail }) {
+      const getBadgeColor = (decision) => {
+        switch(decision) {
+          case 'REPLY': return 'bg-green-100 text-green-800';
+          case 'DELETE': return 'bg-red-100 text-red-800';
+          case 'FLAG': return 'bg-yellow-100 text-yellow-800';
+          default: return 'bg-gray-100 text-gray-800';
+        }
+      };
+
+      return (
+        <div className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center space-x-2 mb-2">
+                <span className={`px-2 py-1 rounded text-xs font-semibold ${getBadgeColor(detail.decision)}`}>
+                  {detail.decision}
+                </span>
+                <span className="text-sm font-medium text-gray-700">{detail.author}</span>
+              </div>
+              <p className="text-gray-700 text-sm mb-2">{detail.text}</p>
+              {detail.replyText && (
+                <div className="bg-green-50 border-l-4 border-green-500 p-3 mt-2">
+                  <p className="text-sm text-green-900"><strong>AI Reply:</strong> {detail.replyText}</p>
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-2">{detail.reason}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ActionStat({ label, value, color }) {
+      const colors = {
+        red: 'bg-red-100 text-red-800',
+        green: 'bg-green-100 text-green-800',
+        yellow: 'bg-yellow-100 text-yellow-800',
+        gray: 'bg-gray-100 text-gray-800',
+        blue: 'bg-blue-100 text-blue-800'
+      };
+
+      return (
+        <div className={`${colors[color]} rounded-lg p-4 text-center`}>
+          <p className="text-2xl font-bold">{value}</p>
+          <p className="text-sm font-medium mt-1">{label}</p>
+        </div>
+      );
+    }
+
+    function ProgressBar({ label, value, total, color }) {
+      const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+      
+      const colors = {
+        green: 'bg-green-500',
+        red: 'bg-red-500',
+        yellow: 'bg-yellow-500',
+        gray: 'bg-gray-500'
+      };
+
+      return (
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-medium text-gray-700">{label}</span>
+            <span className="text-sm font-medium text-gray-700">{value} ({percentage}%)</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className={`${colors[color]} h-2 rounded-full transition-all`}
+              style={{ width: `${percentage}%` }}
+            ></div>
+          </div>
+        </div>
+      );
+    }
+
+    function KeywordBadge({ keyword }) {
+      return (
+        <div className="inline-flex items-center bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm mr-2">
+          <span>{keyword}</span>
+          <button className="ml-2 text-red-600 hover:text-red-800">×</button>
+        </div>
+      );
+    }
+
+    // Render App
+    ReactDOM.render(<Dashboard />, document.getElementById('root'));
+  </script>
+</body>
+</html>
